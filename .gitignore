@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+seamless_env/
+.venv/
+
+# Build/executables
+*.exe
+*.dll
+*.bin
+build/
+dist/
+*.egg-info/
+
+# Node.js/Web
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.css.map
+*.js.map
+
+# Media files (large)
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.mkv
+*.flv
+*.mp3
+*.wav
+cache/
+temp/
+uploads/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
