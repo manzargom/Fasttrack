@@ -3,7 +3,57 @@
 {% block title %}FastTrack Editor{% endblock %}
 
 {% block extra_css %}
-<style>
+    <style>
+.ai-panel {
+    background: rgba(30, 30, 46, 0.9);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 2px solid #8B5CF6;
+}
+
+.ai-panel textarea {
+    width: 100%;
+    height: 100px;
+    background: #2d2d44;
+    color: white;
+    border: 1px solid #8B5CF6;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
+.ai-panel button {
+    background: #8B5CF6;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.ai-output {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid #10B981;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 15px;
+    white-space: pre-wrap;
+}
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #8B5CF6;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
     .compact-video-container {
         position: relative;
         width: 100%;
@@ -491,10 +541,138 @@
         </div>
     </div>
 </div>
+<div id="ai-assistant-panel" style="
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 300px;
+    background: rgba(30, 30, 46, 0.95);
+    border: 2px solid #8B5CF6;
+    border-radius: 10px;
+    padding: 15px;
+    color: white;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+">
+    <h4 style="margin-top: 0; color: #8B5CF6;">🤖 AI Editor Assistant</h4>
+    
+    <textarea id="ai-description" 
+        placeholder="Describe your video or ask for editing advice..."
+        style="width: 100%; height: 80px; background: #2d2d44; color: white; border: 1px solid #555; padding: 8px; border-radius: 5px; margin-bottom: 10px;">
+    </textarea>
+    
+    <button onclick="getAIAdvice()" style="
+        background: #8B5CF6;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+        font-weight: bold;
+    ">Get AI Suggestions</button>
+    
+    <div id="ai-response" style="
+        margin-top: 15px;
+        padding: 10px;
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid #10B981;
+        border-radius: 5px;
+        font-size: 14px;
+        max-height: 200px;
+        overflow-y: auto;
+    ">AI suggestions will appear here...</div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/video-editor.js') }}"></script>
+
+<script>async function getAIEditingSuggestions(videoDescription) {
+    const response = await fetch('http://192.168.1.42:8000/api/generate/text', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            model: 'mistral',
+            prompt: `As a video editor, suggest improvements for: ${videoDescription}`,
+            system_prompt: 'You are an expert video editor specializing in creative transitions and pacing.'
+        })
+    });
+    
+    const data = await response.json();
+    
+    if (data.status === 'complete') {
+        console.log('AI Suggestions:', data.response);
+        // Display in your Fasttrack UI
+        document.getElementById('ai-suggestions').innerHTML = 
+            `<strong>🤖 AI Editor Suggestions:</strong><br>${data.response.replace(/\n/g, '<br>')}`;
+    } else {
+        console.error('AI Error:', data.error);
+    }
+}
+</script>
+<script>
+// AI Framework URL (your local network IP)
+const AI_FRAMEWORK = 'http://127.0.0.1:8000'; 
+
+async function getAIAdvice() {
+    const description = document.getElementById('ai-description').value;
+    const responseDiv = document.getElementById('ai-response');
+    
+    if (!description.trim()) {
+        responseDiv.innerHTML = 'Please describe your video first!';
+        return;
+    }
+    
+    responseDiv.innerHTML = '🤔 AI is thinking... <div class="spinner"></div>';
+    
+    try {
+        const response = await fetch(`${AI_FRAMEWORK}/api/generate/text`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                model: 'mistral',
+                prompt: `As a professional video editor, suggest creative edits and improvements for: "${description}"`,
+                system_prompt: 'You are an expert video editor with 15 years experience. Provide specific, actionable advice about cuts, transitions, pacing, and effects.'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.response) {
+            // Format the response nicely
+            let formatted = data.response
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            responseDiv.innerHTML = 
+                `<strong style="color: #10B981;">🎬 AI Editor Suggestions:</strong><br><br>${formatted}`;
+        } else {
+            responseDiv.innerHTML = `❌ Error: ${data.error || 'No response from AI'}`;
+        }
+    } catch (error) {
+        responseDiv.innerHTML = `❌ Connection failed: ${error.message}<br><br>Make sure AI Framework is running at ${AI_FRAMEWORK}`;
+    }
+}
+
+// Optional: Test connection when page loads
+window.addEventListener('load', async () => {
+    try {
+        const response = await fetch(`${AI_FRAMEWORK}/health`);
+        if (response.ok) {
+            console.log('✅ AI Framework connected');
+            // Show connection status
+            document.getElementById('ai-response').innerHTML = 
+                '✅ AI Assistant Ready (Mistral/LLaVA/Llama connected)';
+        }
+    } catch (error) {
+        console.warn('⚠️ AI Framework not available');
+        document.getElementById('ai-response').innerHTML = 
+            '⚠️ AI Assistant Offline<br>Start: cd AI_Agents_Framework && python api/server.py';
+    }
+});
+</script>
 <script>
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(tab => {
